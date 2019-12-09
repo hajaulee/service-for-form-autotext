@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Form Text recognitor</title>
+	<style type="text/css">
+		#canvas {
+		    width:600px;
+		    height:1000px;
+		    border: 2px solid red;
+		}
+		.rectangle {
+		    border: 2px solid #FF0000;
+		    position: absolute;
+		    background-color: background-color: rgba(50, 115, 220, 0.3);
+		}
+	</style>
+</head>
+<body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<form id="main-form" method="post" action="upload" enctype="multipart/form-data">
+	<center>
+	  	<input type="hidden" name="boxes" id="boxes">
+	  	<input type='file' id="imgInp" name="file" style="margin: auto; margin-bottom: 10px;" />
+	  	<input type="submit" name="btnSubmit" value="Submit">
+	  	<br>
+	  	<input type="hidden" id="size" name="size" placeholder="Image size"><br>
+	  	<div id="frame" style="max-width: 50%;">
+	  		<img id="blah" src="#" alt="your image" style="visibility: hidden; max-width: 100%;" />
+	  		<br>
+	  	</div>
+	  	<!-- <div id="canvas"></div> -->
+ 	</center>
+</form>
+
+
+
+
+
+<script type="text/javascript">	
+function readURL(input) {
+  if (input.files && input.files[0]) {
+    var reader = new FileReader();
+    
+    reader.onload = function(e) {
+      $('#blah').attr('src', e.target.result);
+      $('#blah').css('visibility', 'visible');
+      initDraw(document.getElementById('frame'));
+      $("#size").val($('#blah').get(0).naturalWidth + 'x' + $('#blah').get(0).naturalHeight);
+    }
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+$("#imgInp").change(function() {
+  readURL(this);
+});
+</script>
+
+<script type="text/javascript">
+
+var drawed_boxes = [];
+var input_boxes = [];
+
+$('#main-form').submit(function(e){
+	e.preventDefault();
+	var data = [];
+	for (var i = 0; i < drawed_boxes.length; i++) {
+		var box = drawed_boxes[i];
+		var el = drawed_boxes[i];
+		var img = document.getElementById('blah');
+		var scale = img.naturalWidth / img.offsetWidth;
+		var il = img.offsetLeft;
+		var it = img.offsetTop;
+		var l = parseInt(el.style.left.substring(0, el.style.left.length - 2));
+		var t = parseInt(el.style.top.substring(0, el.style.top.length - 2));
+		var w = parseInt(el.style.width.substring(0, el.style.width.length - 2));
+		var h = parseInt(el.style.height.substring(0, el.style.height.length - 2));
+		var name = input_boxes[i].value;
+		data.push({
+			name: name, 
+			box: {
+					xmin:parseInt(scale*(l-il)),
+					ymin:parseInt(scale*(t-it)), 
+					xmax:parseInt(scale*(l-il+w)), 
+					ymax:parseInt(scale*(t-it+h))
+				}
+			}
+		);
+	}
+
+	$('#boxes').val(JSON.stringify(data));
+	e.currentTarget.submit();
+});
+function initDraw(canvas) {
+    function setMousePosition(e) {
+        var ev = e || window.event; //Moz || IE
+        if (ev.pageX) { //Moz
+            mouse.x = ev.pageX ; //+ window.pageXOffset;
+            mouse.y = ev.pageY ; //+ window.pageYOffset;
+        } else if (ev.clientX) { //IE
+            mouse.x = ev.clientX + document.body.scrollLeft;
+            mouse.y = ev.clientY + document.body.scrollTop;
+        }
+    };
+
+    function in_drew_boxes(mouse){
+    	// console.log(mouse);
+    	for (var i = 0; i < drawed_boxes.length; i++){
+    		var el = drawed_boxes[i];
+    		var l = el.style.left.substring(0, el.style.left.length - 2);
+    		var t = el.style.top.substring(0, el.style.top.length - 2);
+    		var r = parseInt(l) + parseInt(el.style.width.substring(0, el.style.width.length - 2));
+    		var b = parseInt(t) + parseInt(el.style.height.substring(0, el.style.height.length - 2));
+    		// console.log("Mouse:", mouse.x +'/'+mouse.y);
+    		// console.log("input_box:", l + '/' + r + '/'+ t + '/'+b);
+	    	if (mouse.x < r && mouse.x > l && mouse.y > t && mouse.y < b ) {
+	    		return true;
+	    	}
+    	}
+    	return false;
+    }
+
+    var mouse = {
+        x: 0,
+        y: 0,
+        startX: 0,
+        startY: 0
+    };
+    var element = null;
+    var input_box = null;
+    canvas.onmousemove = function (e) {
+        setMousePosition(e);
+        if (element !== null) {
+            element.style.width = Math.abs(mouse.x - mouse.startX) + 'px';
+            element.style.height = Math.abs(mouse.y - mouse.startY) + 'px';
+            element.style.left = (mouse.x - mouse.startX < 0) ? mouse.x + 'px' : mouse.startX + 'px';
+            element.style.top = (mouse.y - mouse.startY < 0) ? mouse.y + 'px' : mouse.startY + 'px';
+        }
+    }
+
+    canvas.onclick = function (e) {
+        if (element !== null) {
+
+            drawed_boxes.push(element);
+            element = null;
+            canvas.style.cursor = "default";
+            console.log("finsihed.");
+
+            //Create array of options to be added
+			var array = [
+							{value: "hoten", text:"Họ và tên"},
+							{value: "diachi", text:"Địa chỉ"},
+							{value: "dvhc", text:"Đơn vị hành chính"},
+							{value: "sdt", text:"Số điện thoại"},
+							{value: "ntn", text:"Ngày tháng"},
+						];
+
+            selectList = document.createElement('select');
+            selectList.className = 'rectangle';
+            selectList.style.zIndex = 100;
+            selectList.style.left = (mouse.x - mouse.startX < 0) ? mouse.x + 'px' : mouse.startX + 'px';
+            selectList.style.top = (mouse.y - mouse.startY < 0) ? mouse.y + 'px' : mouse.startY + 'px';
+            canvas.appendChild(selectList);
+            //Create and append the options
+			for (var i = 0; i < array.length; i++) {
+			    var option = document.createElement("option");
+			    option.value = array[i].value;
+			    option.text = array[i].text;
+			    selectList.appendChild(option);
+			}
+            selectList.focus();
+            input_boxes.push(selectList);
+
+        } else {
+
+        	if(in_drew_boxes(mouse)){
+        		return;
+        	}
+            console.log("begun.");
+            mouse.startX = mouse.x;
+            mouse.startY = mouse.y;
+            element = document.createElement('div');
+            element.className = 'rectangle'
+            element.style.left = mouse.x + 'px';
+            element.style.top = mouse.y + 'px';
+            canvas.appendChild(element);
+            canvas.style.cursor = "crosshair";
+
+        }
+    }
+}
+</script>
+</body>
+</html>
